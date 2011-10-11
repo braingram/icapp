@@ -129,6 +129,26 @@ def random_subsample(audioFiles, n):
             data[ai,si] = af.read_frames(1)
     return data
 
+def range_subsample(audioFiles, start, end):
+    logging.debug("range subsampling: %i %i" % (start, end))
+    [af.seek(0) for af in audioFiles]
+    data = [af.read_frames(end-start) for af in audioFiles]
+    return np.array(data)
+
+def multi_range_subsample(audioFiles, ranges):
+    """
+    ranges is a list of (start, stop) tuples
+    """
+    total = sum([r[1] - r[0] for r in ranges])
+    data = np.empty((len(audioFiles), total))
+    cursors = np.zeros(len(audioFiles))
+    for (ri, r) in enumerate(ranges):
+        for (ai, af) in enumerate(audioFiles):
+            af.seek(r[0])
+            data[ai,cursors[ai]+r[1]-r[0]] = af.read_frames(r[1]-r[0])
+            cursors[ai] += r[1] - r[0]
+    return data
+
 def run_ica(data, ncomponents):
     logging.debug("running ica: %i" % ncomponents)
     ica = FastICA(ncomponents)
@@ -226,6 +246,23 @@ def process():
         else:
             raise ValueError("Wrong number of subsample arguments, expected 1: %s" % str(options.subsample))
         data = random_subsample(afs, *tuple(args))
+    elif options.method == 'range':
+        if len(options.subsample) == 2: # only accept two arguments, a start and stop
+            try:
+                args = [int(options.subsample[0]),int(options.subsample[1])]
+            except ValueError:
+                raise ValueError("Could not convert subsample arguments to int[%s,%s]" % tuple(options.subsample))
+        else:
+            raise ValueError("Wrong number of subsample arguments, expected 2: %s" % str(options.subsample))
+        data = range_subsample(afs, *tuple(args))
+    elif options.method == 'multi':
+        if (len(options.subsample) % 2) or (len(options.subsample) == 0):
+            raise ValueError("Wrong number of subsample arguments, expected at least or multiples of 2: %s" % str(options.subsample))
+        else:
+            ranges = []
+            for (s, e) in zip(options.subsample[::2], options.subsample[1::2]):
+                ranges.append((s,e))
+        data = multi_range_subsample(afs, ranges)
     else:
         raise ValueError("Unknown subsample method: %s" % options.method)
 
