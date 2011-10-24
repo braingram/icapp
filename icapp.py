@@ -37,6 +37,14 @@ def parse_options(args=None):
             help = "subsample method: simple,",
             default = "random", type = "string")
 
+    parser.add_option("-M", "--mixingmatrix", dest = "mixingmatrix",
+            help = "load a pre-computed mixingmatrix (must also define U)",
+            default = "", type = "string")
+    
+    parser.add_option("-U", "--unmixingmatrix", dest = "unmixingmatrix",
+            help = "load a pre-computed unmixingmatrix (must also define M)",
+            default = "", type = "string")
+
     parser.add_option("-s", "--subsample", dest = "subsample",
             help = "subsample argument", action = "append",
             default = [])
@@ -195,7 +203,7 @@ def chunk(n, chunksize, overlap=0):
         else:
             yield (i*chunksize, n)
 
-def clean_files(audioFiles, outputFiles, ica, remixer, chunksize):
+def clean_files(audioFiles, outputFiles, UM, remixer, chunksize):
     """
     Parameters
     ----------
@@ -212,7 +220,8 @@ def clean_files(audioFiles, outputFiles, ica, remixer, chunksize):
         for infile in audioFiles:
             infile.seek(s)
             data.append(infile.read_frames(e-s))
-        tdata = ica.transform(np.array(data))
+        #tdata = ica.transform(np.array(data))
+        tdata = UM * np.array(data)
         cdata = np.array(remixer * tdata)
         for (cd, outfile) in zip(cdata, outputFiles):
             outfile.write_frames(cd)
@@ -222,73 +231,86 @@ def process():
     options, inFilenames = parse_options()
     # open files
     afs = [al.Sndfile(f) for f in inFilenames]
+    if (options.mixingmatrix.strip() == "") and (options.unmixingmatrix.strip() == ""):
 
-    # subsample
-    if options.method == 'simple':
-        if len(options.subsample) == 0:
-            args = [44100,] # set defaults
-        elif len(options.subsample) == 1:
-            try:
-                args = [int(options.subsample[0]),]
-            except ValueError:
-                raise ValueError("Could not convert subsample argument to int[%s]" % options.subsample[0])
+        # subsample
+        if options.method == 'simple':
+            if len(options.subsample) == 0:
+                args = [44100,] # set defaults
+            elif len(options.subsample) == 1:
+                try:
+                    args = [int(options.subsample[0]),]
+                except ValueError:
+                    raise ValueError("Could not convert subsample argument to int[%s]" % options.subsample[0])
+            else:
+                raise ValueError("Wrong number of subsample arguments, expected 1: %s" % str(options.subsample))
+            data = subsample(afs, *tuple(args))
+        elif options.method == 'random':
+            if len(options.subsample) == 0:
+                args = [44100,]
+            elif len(options.subsample) == 1:
+                try:
+                    args = [int(options.subsample[0]),]
+                except ValueError:
+                    raise ValueError("Could not convert subsample argument to int[%s]" % options.subsample[0])
+            else:
+                raise ValueError("Wrong number of subsample arguments, expected 1: %s" % str(options.subsample))
+            data = random_subsample(afs, *tuple(args))
+        elif options.method == 'range':
+            if len(options.subsample) == 2: # only accept two arguments, a start and stop
+                try:
+                    args = [int(options.subsample[0]),int(options.subsample[1])]
+                except ValueError:
+                    raise ValueError("Could not convert subsample arguments to int[%s,%s]" % tuple(options.subsample))
+            else:
+                raise ValueError("Wrong number of subsample arguments, expected 2: %s" % str(options.subsample))
+            data = range_subsample(afs, *tuple(args))
+        elif options.method == 'multi':
+            if (len(options.subsample) % 2) or (len(options.subsample) == 0):
+                raise ValueError("Wrong number of subsample arguments, expected at least or multiples of 2: %s" % str(options.subsample))
+            else:
+                ranges = []
+                for (s, e) in zip(options.subsample[::2], options.subsample[1::2]):
+                    ranges.append((s,e))
+            data = multi_range_subsample(afs, ranges)
         else:
-            raise ValueError("Wrong number of subsample arguments, expected 1: %s" % str(options.subsample))
-        data = subsample(afs, *tuple(args))
-    elif options.method == 'random':
-        if len(options.subsample) == 0:
-            args = [44100,]
-        elif len(options.subsample) == 1:
-            try:
-                args = [int(options.subsample[0]),]
-            except ValueError:
-                raise ValueError("Could not convert subsample argument to int[%s]" % options.subsample[0])
-        else:
-            raise ValueError("Wrong number of subsample arguments, expected 1: %s" % str(options.subsample))
-        data = random_subsample(afs, *tuple(args))
-    elif options.method == 'range':
-        if len(options.subsample) == 2: # only accept two arguments, a start and stop
-            try:
-                args = [int(options.subsample[0]),int(options.subsample[1])]
-            except ValueError:
-                raise ValueError("Could not convert subsample arguments to int[%s,%s]" % tuple(options.subsample))
-        else:
-            raise ValueError("Wrong number of subsample arguments, expected 2: %s" % str(options.subsample))
-        data = range_subsample(afs, *tuple(args))
-    elif options.method == 'multi':
-        if (len(options.subsample) % 2) or (len(options.subsample) == 0):
-            raise ValueError("Wrong number of subsample arguments, expected at least or multiples of 2: %s" % str(options.subsample))
-        else:
-            ranges = []
-            for (s, e) in zip(options.subsample[::2], options.subsample[1::2]):
-                ranges.append((s,e))
-        data = multi_range_subsample(afs, ranges)
+            raise ValueError("Unknown subsample method: %s" % options.method)
+
+        # ica
+        ica = run_ica(data, options.ncomponents)
+
+        # clean
+        MM = clean_ica(ica, options.threshold, options.count)
+        UM = pl.matrix(ica.unmixing_matrix_)
+        # save M
+        pl.savetxt("%s/mixingmatrix" % options.output, MM)
+        pl.savetxt("%s/unmixingmatrix" % options.output, UM)
     else:
-        raise ValueError("Unknown subsample method: %s" % options.method)
+        logging.debug("Loading matrix from file: %s" % options.mixingmatrix)
+        MM = pl.matrix(pl.loadtxt(options.mixingmatrix))
+        logging.debug("Loading matrix from file: %s" % options.unmixingmatrix)
+        UM = pl.matrix(pl.loadtxt(options.unmixingmatrix))
 
-    # ica
-    ica = run_ica(data, options.ncomponents)
-
-    # clean
-    M = clean_ica(ica, options.threshold, options.count)
     ofs = make_output_files(inFilenames, options.output, afs[0].format, afs[0].samplerate)
-    clean_files(afs, ofs, ica, M, options.chunksize)
+    #clean_files(afs, ofs, ica, MM, options.chunksize)
+    clean_files(afs, ofs, UM, MM, options.chunksize)
 
     # close
     logging.debug("Closing files")
     [ofile.close() for ofile in ofs]
     if options.plot:
         pl.figure()
-        pl.imshow(ica.get_mixing_matrix(), interpolation='none')
+        #pl.imshow(ica.get_mixing_matrix(), interpolation='none')
+        pl.imshow(MM, interpolation='none')
         pl.colorbar()
         pl.suptitle("Mixing matrix (pre-cleaning)")
         pl.figure()
-        pl.imshow(M, interpolation='none')
+        pl.imshow(MM, interpolation='none')
         pl.colorbar()
         pl.suptitle("Mixing matrix (post-cleaning)")
         # plot components?
         pl.show()
-    return ica, M
+    return UM, MM
 
 if __name__ == '__main__':
     if len(sys.argv[1:]) == 0:
