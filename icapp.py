@@ -49,6 +49,10 @@ def parse_options(args=None):
             help = "subsample argument", action = "append",
             default = [])
 
+    parser.add_option("-S", "--short", dest = "short",
+            help = "only calculate matrices, do not convert files",
+            default = False, action = "store_true")
+
     parser.add_option("-n", "--ncomponents", dest = "ncomponents",
             help = "number of ica components",
             default = 32, type = "int")
@@ -81,17 +85,30 @@ def parse_options(args=None):
             help = "Number of samples (per file) to reproject per chunk",
             default = 44100, type = "int")
 
+    parser.add_option("-g", "--glob", dest = "glob",
+            help = "Filename glob for file filtering (for directory reading)",
+            default = "input_*.wav", type = "string")
+
     (options, args) = parser.parse_args(args)
-
-    # check options
-    if len(args) < 2:
-        raise ValueError("Must supply at least two audio files[%s]" % str(args))
-
-    options.dtype = np.dtype(options.dtype)
     if options.verbose:
         logging.basicConfig(level=logging.DEBUG)
     else:
         logging.basicConfig(level=logging.WARNING)
+
+    # check options
+    if len(args) == 0:
+        raise ValueError("Must supply at least 1 argument")
+    if len(args) == 1:
+        # test if so use all wav
+        if not os.path.isdir(args[0]):
+            raise ValueError("If 1 arguments is supplied it must be a directory: %s" % str(args[0]))
+        files = glob.glob(args[0] + '/' + options.glob)
+        logging.debug("Found %i input files: %s" % (len(files), str(files)))
+        if len(files) < 2:
+            raise ValueError("Found less than 2 files")
+        args = files
+
+    options.dtype = np.dtype(options.dtype)
 
     if not os.path.exists(options.output):
         os.makedirs(options.output)
@@ -291,13 +308,14 @@ def process():
         logging.debug("Loading matrix from file: %s" % options.unmixingmatrix)
         UM = pl.matrix(pl.loadtxt(options.unmixingmatrix))
 
-    ofs = make_output_files(inFilenames, options.output, afs[0].format, afs[0].samplerate)
-    #clean_files(afs, ofs, ica, MM, options.chunksize)
-    clean_files(afs, ofs, UM, MM, options.chunksize)
-
-    # close
-    logging.debug("Closing files")
-    [ofile.close() for ofile in ofs]
+    if not options.short:
+        ofs = make_output_files(inFilenames, options.output, afs[0].format, afs[0].samplerate)
+        #clean_files(afs, ofs, ica, MM, options.chunksize)
+        clean_files(afs, ofs, UM, MM, options.chunksize)
+        # close
+        logging.debug("Closing files")
+        [ofile.close() for ofile in ofs]
+    
     if options.plot:
         pl.figure()
         #pl.imshow(ica.get_mixing_matrix(), interpolation='none')
