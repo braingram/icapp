@@ -18,12 +18,14 @@
 # 4) remove bad parts/keep good parts
 # 5) recombine and save
 
-import glob, logging, optparse, os, sys
+import glob, logging, optparse, os, sys, warnings
 
 import numpy as np
 import pylab as pl
 
-import scikits.audiolab as al
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    import scikits.audiolab as al
 
 from scikits.learn.decomposition import FastICA
 
