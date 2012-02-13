@@ -300,8 +300,17 @@ def process():
         MM = clean_ica(ica, options.threshold, options.count)
         UM = pl.matrix(ica.unmixing_matrix_)
         # save M
-        pl.savetxt("%s/mixingmatrix" % options.output, MM)
-        pl.savetxt("%s/unmixingmatrix" % options.output, UM)
+        mmfilename = '%s/mixingmatrix' % options.output
+        pl.savetxt(mmfilename, MM)
+        umfilename = '%s/unmixingmatrix' % options.output
+        pl.savetxt(umfilename, UM)
+        # add meta info
+        for fn in [mmfilename, umfilename]:
+            with open(fn,'a') as f:
+                f.write('# method: %s\n' % options.method)
+                f.write('# subsample: %s\n' % str(options.subsample))
+                f.write('# threshold: %f\n' % options.threshold)
+                f.write('# count: %i\n' % options.count)
     else:
         logging.debug("Loading matrix from file: %s" % options.mixingmatrix)
         MM = pl.matrix(pl.loadtxt(options.mixingmatrix))
