@@ -311,7 +311,7 @@ def process():
             with open(fn,'a') as f:
                 f.write('# method: %s\n' % options.method)
                 f.write('# subsample: %s\n' % str(options.subsample))
-                f.write('# threshold: %f\n' % options.threshold)
+                f.write('# threshold: %s\n' % str(options.threshold))
                 f.write('# count: %i\n' % options.count)
     else:
         logging.debug("Loading matrix from file: %s" % options.mixingmatrix)
