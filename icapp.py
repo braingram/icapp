@@ -18,7 +18,12 @@
 # 4) remove bad parts/keep good parts
 # 5) recombine and save
 
-import glob, logging, optparse, os, sys, warnings
+import glob
+import logging
+import optparse
+import os
+import sys
+import warnings
 
 import numpy as np
 import pylab as pl
@@ -29,67 +34,71 @@ with warnings.catch_warnings():
 
 from scikits.learn.decomposition import FastICA
 
+
 def parse_options(args=None):
     """
     chain these like so:
-        main parser -> get subsample method -> parse subsample options -> check options -> GO
+        main parser -> get subsample method ->
+            parse subsample options -> check options -> GO
     """
-    parser = optparse.OptionParser(usage="usage: %prog [options] audiofiles...")
-    parser.add_option("-m", "--method", dest = "method",
-            help = "subsample method: simple,",
-            default = "random", type = "string")
+    parser = optparse.OptionParser( \
+            usage="usage: %prog [options] audiofiles...")
+    parser.add_option("-m", "--method", dest="method",
+            help="subsample method: simple,",
+            default="random", type="string")
 
-    parser.add_option("-M", "--mixingmatrix", dest = "mixingmatrix",
-            help = "load a pre-computed mixingmatrix (must also define U)",
-            default = "", type = "string")
-    
-    parser.add_option("-U", "--unmixingmatrix", dest = "unmixingmatrix",
-            help = "load a pre-computed unmixingmatrix (must also define M)",
-            default = "", type = "string")
+    parser.add_option("-M", "--mixingmatrix", dest="mixingmatrix",
+            help="load a pre-computed mixingmatrix (must also define U)",
+            default="", type="string")
 
-    parser.add_option("-s", "--subsample", dest = "subsample",
-            help = "subsample argument", action = "append",
-            default = [])
+    parser.add_option("-U", "--unmixingmatrix", dest="unmixingmatrix",
+            help="load a pre-computed unmixingmatrix (must also define M)",
+            default="", type="string")
 
-    parser.add_option("-S", "--short", dest = "short",
-            help = "only calculate matrices, do not convert files",
-            default = False, action = "store_true")
+    parser.add_option("-s", "--subsample", dest="subsample",
+            help="subsample argument", action="append",
+            default=[])
 
-    parser.add_option("-n", "--ncomponents", dest = "ncomponents",
-            help = "number of ica components",
-            default = 32, type = "int")
-    
-    parser.add_option("-d", "--dtype", dest = "dtype",
-            help = "data type to read from file",
-            default = "float64", type = "string")
+    parser.add_option("-S", "--short", dest="short",
+            help="only calculate matrices, do not convert files",
+            default=False, action="store_true")
 
-    parser.add_option("-v", "--verbose", dest = "verbose",
-            help = "enable verbose output",
-            default = False, action = "store_true")
-    
-    parser.add_option("-p", "--plot", dest = "plot",
-            help = "generate debugging plots",
-            default = False, action = "store_true")
+    parser.add_option("-n", "--ncomponents", dest="ncomponents",
+            help="number of ica components",
+            default=32, type="int")
 
-    parser.add_option("-o", "--output", dest = "output",
-            help = "output directory",
-            default = "cleaned")
+    parser.add_option("-d", "--dtype", dest="dtype",
+            help="data type to read from file",
+            default="float64", type="string")
 
-    parser.add_option("-t", "--threshold", dest = "threshold",
-            help = "Threshold at which to consider a mixing matrix cell active",
-            default = None, type = "float")
+    parser.add_option("-v", "--verbose", dest="verbose",
+            help="enable verbose output",
+            default=False, action="store_true")
 
-    parser.add_option("-c", "--count", dest = "count",
-            help = "Number of cells within a column of the mixing matrix required to count the component as noise",
-            default = 3, type = "int")
-    
-    parser.add_option("-C", "--chunksize", dest = "chunksize",
-            help = "Number of samples (per file) to reproject per chunk",
-            default = 44100, type = "int")
+    parser.add_option("-p", "--plot", dest="plot",
+            help="generate debugging plots",
+            default=False, action="store_true")
 
-    parser.add_option("-g", "--glob", dest = "glob",
-            help = "Filename glob for file filtering (for directory reading)",
-            default = "input_*.wav", type = "string")
+    parser.add_option("-o", "--output", dest="output",
+            help="output directory",
+            default="cleaned")
+
+    parser.add_option("-t", "--threshold", dest="threshold",
+            help="Threshold at which to consider a mixing matrix cell active",
+            default=None, type="float")
+
+    parser.add_option("-c", "--count", dest="count",
+            help="Number of cells within a column of the mixing matrix "
+            "required to count the component as noise",
+            default=3, type="int")
+
+    parser.add_option("-C", "--chunksize", dest="chunksize",
+            help="Number of samples (per file) to reproject per chunk",
+            default=44100, type="int")
+
+    parser.add_option("-g", "--glob", dest="glob",
+            help="Filename glob for file filtering (for directory reading)",
+            default="input_*.wav", type="string")
 
     (options, args) = parser.parse_args(args)
     if options.verbose:
@@ -103,7 +112,8 @@ def parse_options(args=None):
     if len(args) == 1:
         # test if so use all wav
         if not os.path.isdir(args[0]):
-            raise ValueError("If 1 arguments is supplied it must be a directory: %s" % str(args[0]))
+            raise ValueError("If 1 arguments is supplied it must "
+            "be a directory: %s" % str(args[0]))
         files = glob.glob(args[0] + '/' + options.glob)
         logging.debug("Found %i input files: %s" % (len(files), str(files)))
         if len(files) < 2:
@@ -133,7 +143,7 @@ def subsample(audioFiles, n):
     -------
     data : numpy.ndarray
         Subsampled data (ordered: FILE x SAMPLE)
-    
+
     Notes
     -----
     More complex functions could take it's place. Such as...
@@ -146,21 +156,24 @@ def subsample(audioFiles, n):
     data = [af.read_frames(n) for af in audioFiles]
     return np.array(data)
 
+
 def random_subsample(audioFiles, n):
     logging.debug("random subsampling: %i" % n)
     samps = np.random.randint(0, audioFiles[0].nframes, n)
-    data = np.empty((len(audioFiles),n))
+    data = np.empty((len(audioFiles), n))
     for (si, s) in enumerate(samps):
         for (ai, af) in enumerate(audioFiles):
             af.seek(s)
-            data[ai,si] = af.read_frames(1)
+            data[ai, si] = af.read_frames(1)
     return data
+
 
 def range_subsample(audioFiles, start, end):
     logging.debug("range subsampling: %i %i" % (start, end))
     [af.seek(0) for af in audioFiles]
-    data = [af.read_frames(end-start) for af in audioFiles]
+    data = [af.read_frames(end - start) for af in audioFiles]
     return np.array(data)
+
 
 def multi_range_subsample(audioFiles, ranges):
     """
@@ -172,15 +185,17 @@ def multi_range_subsample(audioFiles, ranges):
     for (ri, r) in enumerate(ranges):
         for (ai, af) in enumerate(audioFiles):
             af.seek(r[0])
-            data[ai,cursors[ai]+r[1]-r[0]] = af.read_frames(r[1]-r[0])
+            data[ai, cursors[ai] + r[1] - r[0]] = af.read_frames(r[1] - r[0])
             cursors[ai] += r[1] - r[0]
     return data
+
 
 def run_ica(data, ncomponents):
     logging.debug("running ica: %i" % ncomponents)
     ica = FastICA(ncomponents)
     ica.fit(data)
     return ica
+
 
 def clean_ica(ica, threshold, count):
     mm = ica.get_mixing_matrix()
@@ -193,14 +208,16 @@ def clean_ica(ica, threshold, count):
     logging.debug("component votes: %s" % str(votes))
     bad = np.where(votes > count)[0]
     logging.debug("noise components: %s" % str(bad))
-    mm[:,bad] = np.zeros_like(mm[:,bad])
+    mm[:, bad] = np.zeros_like(mm[:, bad])
     return np.matrix(mm)
     try:
         umm = np.linalg.inv(mm)
     except np.linalg.LinAlgError:
-        logging.debug("Failed to mathematically invert matrix, trying pseudo-inverse")
+        logging.debug("Failed to mathematically invert matrix, "
+        "trying pseudo-inverse")
         umm = np.linalg.pinv(mm)
     return np.matrix(umm)
+
 
 def make_output_files(inputFilenames, outputdir, auformat, samplerate):
     logging.debug("Making output files in directory %s" % outputdir)
@@ -210,17 +227,19 @@ def make_output_files(inputFilenames, outputdir, auformat, samplerate):
         outputFiles.append(al.Sndfile(ofn, 'w', auformat, 1, samplerate))
     return outputFiles
 
+
 def chunk(n, chunksize, overlap=0):
     """
     Chunk generator
     """
-    for i in xrange((n/chunksize)+1):
+    for i in xrange((n / chunksize) + 1):
         if (i * chunksize) >= n:
             return
-        if ((i+1) * chunksize + overlap) < n:
-            yield (i*chunksize, (i+1)*chunksize + overlap)
+        if ((i + 1) * chunksize + overlap) < n:
+            yield (i * chunksize, (i + 1) * chunksize + overlap)
         else:
-            yield (i*chunksize, n)
+            yield (i * chunksize, n)
+
 
 def clean_files(audioFiles, outputFiles, UM, remixer, chunksize):
     """
@@ -238,7 +257,7 @@ def clean_files(audioFiles, outputFiles, UM, remixer, chunksize):
         data = []
         for infile in audioFiles:
             infile.seek(s)
-            data.append(infile.read_frames(e-s))
+            data.append(infile.read_frames(e - s))
         #tdata = ica.transform(np.array(data))
         tdata = UM * np.array(data)
         cdata = np.array(remixer * tdata)
@@ -246,51 +265,64 @@ def clean_files(audioFiles, outputFiles, UM, remixer, chunksize):
             outfile.write_frames(cd)
             outfile.sync()
 
+
 def process():
     options, inFilenames = parse_options()
     # open files
     afs = [al.Sndfile(f) for f in inFilenames]
-    if (options.mixingmatrix.strip() == "") and (options.unmixingmatrix.strip() == ""):
+    if (options.mixingmatrix.strip() == "") and \
+            (options.unmixingmatrix.strip() == ""):
 
         # subsample
         if options.method == 'simple':
             if len(options.subsample) == 0:
-                args = [44100,] # set defaults
+                args = [44100, ]  # set defaults
             elif len(options.subsample) == 1:
                 try:
-                    args = [int(options.subsample[0]),]
+                    args = [int(options.subsample[0]), ]
                 except ValueError:
-                    raise ValueError("Could not convert subsample argument to int[%s]" % options.subsample[0])
+                    raise ValueError("Could not convert subsample argument "
+                    "to int[%s]" % options.subsample[0])
             else:
-                raise ValueError("Wrong number of subsample arguments, expected 1: %s" % str(options.subsample))
+                raise ValueError("Wrong number of subsample arguments, "
+                "expected 1: %s" % str(options.subsample))
             data = subsample(afs, *tuple(args))
         elif options.method == 'random':
             if len(options.subsample) == 0:
-                args = [44100,]
+                args = [44100, ]
             elif len(options.subsample) == 1:
                 try:
-                    args = [int(options.subsample[0]),]
+                    args = [int(options.subsample[0]), ]
                 except ValueError:
-                    raise ValueError("Could not convert subsample argument to int[%s]" % options.subsample[0])
+                    raise ValueError("Could not convert subsample argument "
+                            "to int[%s]" % options.subsample[0])
             else:
-                raise ValueError("Wrong number of subsample arguments, expected 1: %s" % str(options.subsample))
+                raise ValueError("Wrong number of subsample arguments, "
+                "expected 1: %s" % str(options.subsample))
             data = random_subsample(afs, *tuple(args))
         elif options.method == 'range':
-            if len(options.subsample) == 2: # only accept two arguments, a start and stop
+            # only accept two arguments, a start and stop
+            if len(options.subsample) == 2:
                 try:
-                    args = [int(options.subsample[0]),int(options.subsample[1])]
+                    args = [int(options.subsample[0]), \
+                            int(options.subsample[1])]
                 except ValueError:
-                    raise ValueError("Could not convert subsample arguments to int[%s,%s]" % tuple(options.subsample))
+                    raise ValueError("Could not convert subsample arguments "
+                    "to int[%s,%s]" % tuple(options.subsample))
             else:
-                raise ValueError("Wrong number of subsample arguments, expected 2: %s" % str(options.subsample))
+                raise ValueError("Wrong number of subsample arguments, "
+                "expected 2: %s" % str(options.subsample))
             data = range_subsample(afs, *tuple(args))
         elif options.method == 'multi':
             if (len(options.subsample) % 2) or (len(options.subsample) == 0):
-                raise ValueError("Wrong number of subsample arguments, expected at least or multiples of 2: %s" % str(options.subsample))
+                raise ValueError("Wrong number of subsample arguments, "
+                "expected at least or multiples of 2: %s" % \
+                        str(options.subsample))
             else:
                 ranges = []
-                for (s, e) in zip(options.subsample[::2], options.subsample[1::2]):
-                    ranges.append((s,e))
+                for (s, e) in zip(options.subsample[::2], \
+                        options.subsample[1::2]):
+                    ranges.append((s, e))
             data = multi_range_subsample(afs, ranges)
         else:
             raise ValueError("Unknown subsample method: %s" % options.method)
@@ -308,7 +340,7 @@ def process():
         pl.savetxt(umfilename, UM)
         # add meta info
         for fn in [mmfilename, umfilename]:
-            with open(fn,'a') as f:
+            with open(fn, 'a') as f:
                 f.write('# method: %s\n' % options.method)
                 f.write('# subsample: %s\n' % str(options.subsample))
                 f.write('# threshold: %s\n' % str(options.threshold))
@@ -320,13 +352,14 @@ def process():
         UM = pl.matrix(pl.loadtxt(options.unmixingmatrix))
 
     if not options.short:
-        ofs = make_output_files(inFilenames, options.output, afs[0].format, afs[0].samplerate)
+        ofs = make_output_files(inFilenames, options.output, \
+                afs[0].format, afs[0].samplerate)
         #clean_files(afs, ofs, ica, MM, options.chunksize)
         clean_files(afs, ofs, UM, MM, options.chunksize)
         # close
         logging.debug("Closing files")
         [ofile.close() for ofile in ofs]
-    
+
     if options.plot:
         pl.figure()
         #pl.imshow(ica.get_mixing_matrix(), interpolation='none')
@@ -349,81 +382,3 @@ if __name__ == '__main__':
         sys.argv.append('0.1')
     ica, M = process()
     sys.exit(0)
-    
-    # -------------------------------------
-    # -------------  old code  ------------
-    # -------------------------------------
-    
-    afs = sys.argv[1:]
-    if len(afs) < 2:
-        afs = glob.glob('data/clip_*')
-        #raise ValueError("Must supply at least 2 audio files")
-
-    # open audio files
-    print "opening files"
-    dfs = [al.Sndfile(f) for f in afs]
-    #n = dfs[0].nframes
-    n = 4410
-
-    # read data
-    print "reading data"
-    data = subsample(dfs, n)
-    #data = [df.read_frames(n) for df in dfs]
-    #data = np.array(data) # ordered as FILE x SAMPLE
-
-    # run ICA
-    print "running ica"
-    nfeatures = len(dfs)
-    ica = FastICA(nfeatures)
-    ica.fit(data)
-   
-    print "plotting mixing matrix"
-    mm = ica.get_mixing_matrix()
-    votes = np.sum(np.abs(mm) > (1. / float(nfeatures)), 0)
-    print "channel votes", votes
-    bcs = np.where(votes > 8)[0]
-    mm[:,bcs] = np.zeros_like(mm[:,bcs])
-    try:
-        umm = np.linalg.inv(mm)
-    except np.linalg.LinAlgError:
-        print "Failed to mathematically invert matrix, trying pseudo-inverse"
-        umm = np.linalg.pinv(mm)
-    umm = np.matrix(umm)
-    #ica.unmixing_matrix_ = umm
-    #pl.figure()
-    #pl.imshow(mm, interpolation='none')
-    #pl.colorbar()
-    print "mixing matrix shape:", mm.shape
-    # mm is CHANNELS x COMPONENTS, so :,0 is all channels component 0
-   
-    print "reading all data"
-    for df in dfs:
-        df.seek(0)
-    n = dfs[0].nframes
-    fdata = [df.read_frames(n) for df in dfs]
-    print "transformaing data"
-    S = ica.transform(fdata)
-    print "cleaning"
-    cdata = np.array(umm * S)
-    print "saving"
-    oafs = ["%s/%s_%s" % (os.path.dirname(af), "clean", os.path.basename(af)) for af in afs]
-    for (i, oaf) in enumerate(oafs):
-        output = al.Sndfile(oaf, 'w', dfs[0].format, 1, dfs[0].samplerate)
-        output.write_frames(cdata[i])
-        output.sync()
-        output.close()
-    # test components
-    #print "getting components"
-    #pl.figure()
-    #S = ica.transform(data)
-    #NC = S.shape[0]
-    #for ci in xrange(NC):
-    #    #pl.subplot(NC,1,ci+1)
-    #    pl.plot(S[ci,:]+ci*0.1)
-    #    #print "%i : %f" % (ci, hurst(S[ci,:]))
-    #
-    #pl.xlim(0,4410)
-    #
-    # recombine
-    #pl.show()
-
