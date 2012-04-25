@@ -22,6 +22,7 @@ import glob
 import logging
 import optparse
 import os
+import re
 import sys
 import warnings
 
@@ -99,6 +100,10 @@ def parse_options(args=None):
     parser.add_option("-g", "--glob", dest="glob",
             help="Filename glob for file filtering (for directory reading)",
             default="input_*.wav", type="string")
+
+    parser.add_option("-P", "--position-sort", dest="psort",
+            help="Sort filenames by position (assumes tdt ordering): "
+            "1/0, enable/disable", default=1, type="int")
 
     (options, args) = parser.parse_args(args)
     if options.verbose:
@@ -250,6 +255,9 @@ def clean_files(audioFiles, outputFiles, UM, remixer, chunksize):
     outputFiles : list of scikits.audiolab.Sndfile
         Should be open
     """
+
+    CM = remixer * UM
+
     logging.debug("cleaning files, chunksize: %i" % chunksize)
     nframes = audioFiles[0].nframes
     for (s, e) in chunk(nframes, chunksize):
@@ -259,16 +267,37 @@ def clean_files(audioFiles, outputFiles, UM, remixer, chunksize):
             infile.seek(s)
             data.append(infile.read_frames(e - s))
         #tdata = ica.transform(np.array(data))
-        tdata = UM * np.array(data)
-        cdata = np.array(remixer * tdata)
+
+        #tdata = UM * np.array(data)
+        #cdata = np.array(remixer * tdata)
+
+        cdata = np.array(CM * np.array(data))
         for (cd, outfile) in zip(cdata, outputFiles):
             outfile.write_frames(cd)
             outfile.sync()
 
 
+def psorted(fns):
+    TDT_POS = (-1, 2, 8, 6, 12, 4, 16, 0, 20, 13, 1, 7, 5, 17, 3, 11, 9, 22, \
+            14, 30, 26, 18, 10, 28, 24, 29, 25, 19, 15, 31, 27, 23, 21)
+    regex = r'_([0-9]+)\#'
+    return sorted(fns, key=lambda fn: TDT_POS[int(re.findall(regex, \
+            os.path.basename(fn))[0])])
+
+    def foo(fn):
+        i = int(re.findall(regex, os.path.basename(fn))[0])
+        t = TDT_POS[i]
+        print os.path.basename(fn), i, t
+        return t
+    return sorted(fns, key=foo)
+
+
 def process():
     options, inFilenames = parse_options()
+    options.port = bool(options.psort)
     # open files
+    if options.psort == 1:
+        inFilenames = psorted(inFilenames)
     afs = [al.Sndfile(f) for f in inFilenames]
     if (options.mixingmatrix.strip() == "") and \
             (options.unmixingmatrix.strip() == ""):
