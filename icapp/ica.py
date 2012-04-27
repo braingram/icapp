@@ -33,8 +33,12 @@ def run_ica(data, ncomponents):
     logging.debug("running ica: %i" % ncomponents)
     ica = FastICA(ncomponents)
     ica.fit(data)
-    return numpy.matrix(ica.mixing_matrix()), \
-            numpy.matrix(ica.unmixing_matrix_)
+    if hasattr(ica, 'mixing_matrix'):
+        return numpy.matrix(ica.mixing_matrix()), \
+                numpy.matrix(ica.unmixing_matrix_)
+    else:
+        return numpy.matrix(ica.get_mixing_matrix()), \
+                numpy.matrix(ica.unmixing_matrix_)
 
 
 def clean_ica(mix, count, threshold=None, full=False):
@@ -68,7 +72,7 @@ def clean_ica(mix, count, threshold=None, full=False):
     if threshold is None:
         threshold = numpy.mean(mix) + numpy.std(mix) * 2.
     logging.debug("cleaning ica: %f, %i" % (threshold, count))
-    votes = numpy.sum(numpy.abs(mix) > threshold, 0)
+    votes = numpy.array(numpy.sum(numpy.abs(mix) > threshold, 0))
     bad = numpy.where(votes > count)[0]
     clean = mix.copy()
     clean[:, bad] = numpy.zeros_like(mix[:, bad])
@@ -112,3 +116,53 @@ def clean_data(data, clean):
         cleaned data
     """
     return numpy.array(clean * data)
+
+
+def make_ica(data, ncomponents, count, threshold):
+    """
+    Combined running and cleaning
+
+
+    Parameters
+    ----------
+    data : numpy.array
+        data to fit ica
+
+    ncomponents : int
+        number of components for ica
+
+    count : int
+        If ica components is super-threshold on > count channels remove it
+
+    threshold : float
+        Threshold used to binarize the mixing matrix, If None, autocompute
+
+
+    Returns
+    -------
+    mm : numpy.matrix
+        ica mixing matrix
+
+    mm : numpy.matrix
+        ica un-mixing matrix
+
+    cm : numpy.matrix
+        ica cleaning matrix
+
+    count : int
+        If ica components is super-threshold on > count channels remove it
+
+    threshold : float
+        Threshold used to binarize the mixing matrix
+
+
+    See Also
+    --------
+    run_ica
+    clean_ica
+    make_cleaning_ica
+    """
+    mm, um = run_ica(data, ncomponents)
+    mm, count, threshold = clean_ica(mm, count, threshold, full=True)
+    cm = make_cleaning_matrix(mm, um)
+    return mm, um, cm, count, threshold
