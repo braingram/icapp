@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 
-import glob
 import logging
 import optparse
 import os
-import re
 import sys
 
 import numpy
