@@ -70,10 +70,12 @@ def clean_ica(mix, count, threshold=None, full=False):
         same as parameter, may be autocalculated if parameter was None
     """
     if threshold is None:
-        threshold = numpy.mean(mix) + numpy.std(mix) * 2.
+        threshold = numpy.mean(mix) + numpy.std(mix)
     logging.debug("cleaning ica: %f, %i" % (threshold, count))
-    votes = numpy.array(numpy.sum(numpy.abs(mix) > threshold, 0))
+    votes = numpy.sum(numpy.abs(numpy.array(mix)) > threshold, 0)
+    logging.debug("component votes: %s" % votes)
     bad = numpy.where(votes > count)[0]
+    logging.debug("noise components: %s" % bad)
     clean = mix.copy()
     clean[:, bad] = numpy.zeros_like(mix[:, bad])
     if full:
@@ -96,7 +98,7 @@ def make_cleaning_matrix(mix, unmix):
     clean : numpy.matrix
         Single matrix (combining unmix and mix) used to clean data
     """
-    return mix * unmix
+    return numpy.matrix(mix) * numpy.matrix(unmix)
 
 
 def clean_data(data, clean):
@@ -163,6 +165,6 @@ def make_ica(data, ncomponents, count, threshold):
     make_cleaning_ica
     """
     mm, um = run_ica(data, ncomponents)
-    mm, count, threshold = clean_ica(mm, count, threshold, full=True)
-    cm = make_cleaning_matrix(mm, um)
-    return mm, um, cm, count, threshold
+    cmm, count, threshold = clean_ica(mm, count, threshold, full=True)
+    cm = make_cleaning_matrix(cmm, um)
+    return cmm, um, cm, count, threshold
