@@ -6,10 +6,10 @@ import warnings
 
 import numpy
 
-
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     import scikits.audiolab
+
 
 datakeys = ['mm', 'um', 'cm', 'fns', 'c', 't']
 

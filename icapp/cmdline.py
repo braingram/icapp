@@ -144,6 +144,18 @@ def options_to_kwargs(options):
     return kwargs
 
 
+def process_src(src, method=None, sargs=None, ncomponents=None, count=None,
+        threshold=None, stdthreshold=None):
+    logging.debug("Subsample: %s, %s" % (method, sargs))
+    data = subsample.subsample(src, method, *sargs)
+
+    logging.debug("Making ica: %s, %s, %s" % \
+            (ncomponents, count, threshold))
+    #mm, um, cm, count, threshold = ica.make_ica(data, ncomponents, \
+    #        count, threshold, stdthreshold)
+    return ica.make_ica(data, ncomponents, count, threshold, stdthreshold)
+
+
 def clean_files(filenames, **kwargs):
     logging.debug("Cleaning files: %s" % filenames)
 
@@ -157,21 +169,12 @@ def clean_files(filenames, **kwargs):
     if not (os.path.exists(icafile)) or kwargs['overwrite']:
         logging.debug("Calculating ica...")
 
-        # subsample data
-        method = kwargs['method']
-        sargs = kwargs['sargs']
-        logging.debug("Subsample: %s, %s" % (method, sargs))
-        data = subsample.subsample(src, method, *sargs)
-
-        # calculate ica
-        ncomponents = kwargs['ncomponents']
-        count = kwargs['count']
-        threshold = kwargs['threshold']
-        stdthreshold = kwargs['stdthreshold']
-        logging.debug("Making ica: %s, %s, %s" % \
-                (ncomponents, count, threshold))
-        mm, um, cm, count, threshold = ica.make_ica(data, ncomponents, \
-                count, threshold, stdthreshold)
+        # process source
+        pkwargs = {}
+        for k in ['method', 'sargs', 'ncomponents', 'count', 'threshold', \
+                'stdthreshold']:
+            pkwargs[k] = kwargs[k]
+        mm, um, cm, count, threshold = process_src(src, **pkwargs)
 
         # save ica file
         logging.debug("Saving ica: %s" % icafile)
