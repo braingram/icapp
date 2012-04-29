@@ -16,6 +16,37 @@ datakeys = ['mm', 'um', 'cm', 'fns', 'c', 't']
 
 # --------------- loading and saving -----------------
 def load_ica(filename, key=None):
+    """
+    Parameters
+    ----------
+    filename : str
+        Saved ica pickle file (e.g. ica.p)
+
+    key : str (optional)
+        ica data structure key to load
+
+
+    Returns
+    -------
+    ica_struct : tuple
+        Items in this tuple defined by datakeys
+        If key is not None, returns just they keyed item
+
+
+    Examples
+    --------
+    mm, um, cm, fns, c, t = load_ica('ica.p')
+        Loads all items from ica.p including
+            mm : mixing matrix
+            um : unmixing matrix
+            cm : cleaning matrix
+            fns : shortened filenames
+            c : cleaning count
+            t : cleaning threshold
+
+    cm = load_ica('ica.p', key='cm')
+        Loads just the cleaning matrix
+    """
     i = load_ica_dict(filename)
     if key is None:
         return [i[k] for k in datakeys]
