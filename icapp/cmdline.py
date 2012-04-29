@@ -40,7 +40,6 @@ def parse(args):
                 }],
             [['-n', '--ncomponents'], {
                 'help': 'number of ica components',
-                'default': 32,
                 'type': 'int',
                 }],
             [['-o', '--overwrite'], {
@@ -72,6 +71,11 @@ def parse(args):
                 'default': None,
                 'type': 'float',
                 }],
+            [['-T', '--stdthreshold'], {
+                'help': 'N stds used to auto-calculate threshold',
+                'default': 1.0,
+                'type': 'float',
+                }],
             [['-v', '--verbose'], {
                 'help': 'enable verbose output',
                 'default': False,
@@ -81,7 +85,12 @@ def parse(args):
 
     [parser.add_option(*a, **kw) for (a, kw) in options]
 
-    return parser.parse_args(args)
+    options, args = parser.parse_args(args)
+
+    if options.ncomponents is None:
+        options.ncomponents = len(args)
+
+    return options, args
 
 
 def run(args=None):
@@ -125,7 +134,7 @@ def options_to_kwargs(options):
 
     for k in ['count', 'clean', 'icafile', 'method', 'ncomponents',
             'overwrite', 'output', 'plot', 'sargs', 'chunksize',
-            'threshold']:
+            'threshold', 'stdthreshold']:
         kwargs[k] = getattr(options, k)
         logging.debug("Settings %s: %s" % (k, kwargs[k]))
 
@@ -158,10 +167,11 @@ def clean_files(filenames, **kwargs):
         ncomponents = kwargs['ncomponents']
         count = kwargs['count']
         threshold = kwargs['threshold']
+        stdthreshold = kwargs['stdthreshold']
         logging.debug("Making ica: %s, %s, %s" % \
                 (ncomponents, count, threshold))
         mm, um, cm, count, threshold = ica.make_ica(data, ncomponents, \
-                count, threshold)
+                count, threshold, stdthreshold)
 
         # save ica file
         logging.debug("Saving ica: %s" % icafile)

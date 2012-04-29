@@ -41,7 +41,7 @@ def run_ica(data, ncomponents):
                 numpy.matrix(ica.unmixing_matrix_)
 
 
-def clean_ica(mix, count, threshold=None, full=False):
+def clean_ica(mix, count, threshold=None, stdthreshold=1.0, full=False):
     """
     Parameters
     ----------
@@ -70,7 +70,7 @@ def clean_ica(mix, count, threshold=None, full=False):
         same as parameter, may be autocalculated if parameter was None
     """
     if threshold is None:
-        threshold = numpy.mean(mix) + numpy.std(mix)
+        threshold = numpy.mean(mix) + numpy.std(mix) * stdthreshold
     logging.debug("cleaning ica: %f, %i" % (threshold, count))
     votes = numpy.sum(numpy.abs(numpy.array(mix)) > threshold, 0)
     logging.debug("component votes: %s" % votes)
@@ -120,7 +120,7 @@ def clean_data(data, clean):
     return numpy.array(clean * data)
 
 
-def make_ica(data, ncomponents, count, threshold):
+def make_ica(data, ncomponents, count, threshold, stdthreshold):
     """
     Combined running and cleaning
 
@@ -165,6 +165,7 @@ def make_ica(data, ncomponents, count, threshold):
     make_cleaning_ica
     """
     mm, um = run_ica(data, ncomponents)
-    cmm, count, threshold = clean_ica(mm, count, threshold, full=True)
+    cmm, count, threshold = clean_ica(mm, count, threshold, stdthreshold, \
+            full=True)
     cm = make_cleaning_matrix(cmm, um)
     return cmm, um, cm, count, threshold
