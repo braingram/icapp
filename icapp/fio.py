@@ -11,13 +11,16 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     import scikits.audiolab
 
-datakeys = ['mix', 'unmix', 'clean', 'fns', 'count', 'thresh']
+datakeys = ['mm', 'um', 'cm', 'fns', 'c', 't']
 
 
 # --------------- loading and saving -----------------
-def load_ica(filename):
+def load_ica(filename, key=None):
     i = load_ica_dict(filename)
-    return [i[k] for k in datakeys]
+    if key is None:
+        return [i[k] for k in datakeys]
+    else:
+        return i[k]
 
 
 def load_ica_dict(filename):
