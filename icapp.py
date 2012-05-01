@@ -260,12 +260,14 @@ def clean_files(audioFiles, outputFiles, UM, remixer, chunksize):
 
     logging.debug("cleaning files, chunksize: %i" % chunksize)
     nframes = audioFiles[0].nframes
+    [f.seek(0) for f in audioFiles]
     for (s, e) in chunk(nframes, chunksize):
         logging.debug("chunk: %i to %i" % (s, e))
-        data = []
-        for infile in audioFiles:
-            infile.seek(s)
-            data.append(infile.read_frames(e - s))
+        data = np.vstack([f.read_frames(e - s) for f in audioFiles])
+        #data = []
+        #for infile in audioFiles:
+        #    infile.seek(s)
+        #    data.append(infile.read_frames(e - s))
         #tdata = ica.transform(np.array(data))
 
         #tdata = UM * np.array(data)
