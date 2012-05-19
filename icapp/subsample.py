@@ -3,6 +3,18 @@
 import numpy
 
 
+def parse_arg(arg, max_n):
+    if isinstance(arg, float):
+        assert arg > 0.0, "Float arg[%s] must be > 0.0" % arg
+        assert arg <= 1.0, "Float args[%s] must be < 1.0" % arg
+        return int(arg * max_n)
+    else:
+        assert arg <= max_n, \
+                "Int arg[%s] must be < len(src)[%s]" % \
+                (arg, max_n)
+        return arg
+
+
 def subsample(src, method, *args):
     """
     Return a subsample of data in src
@@ -51,10 +63,10 @@ def subsample(src, method, *args):
             end = len(src)
         elif len(args) == 1:
             start = 0
-            end = int(args[0])
+            end = parse_arg(args[0], len(src))
         elif len(args) == 2:
-            start = int(args[0])
-            end = int(args[1])
+            start = parse_arg(args[0], len(src))
+            end = parse_arg(args[1], len(src))
         elif len(args) > 2:
             raise ValueError("Too many(>2) subsample arguments: %s" % \
                     (list(args)))
@@ -71,11 +83,11 @@ def subsample(src, method, *args):
         elif len(args) == 2:
             n = int(args[0])
             minn = 0
-            maxn = int(args[1])
+            maxn = parse_arg(args[1], len(src))
         elif len(args) == 3:
             n = int(args[0])
-            minn = int(args[1])
-            maxn = int(args[2])
+            minn = parse_arg(args[1], len(src))
+            maxn = parse_arg(args[2], len(src))
         elif len(args) > 3:
             raise ValueError("Too many(>3) subsample arguments: %s" % \
                     (list(args)))

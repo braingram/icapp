@@ -138,6 +138,11 @@ class MultiAudioFile(object):
 
     samplerate = property(get_samplerate)
 
+    def get_nchan(self):
+        return len(self.files)
+
+    nchan = property(get_nchan)
+
     def sync(self):
         [f.sync() for f in self.files]
 
