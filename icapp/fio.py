@@ -51,7 +51,7 @@ def load_ica(filename, key=None):
     if key is None:
         return [i[k] for k in datakeys]
     else:
-        return i[k]
+        return i[key]
 
 
 def load_ica_dict(filename):
