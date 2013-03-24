@@ -5,7 +5,7 @@ import numpy
 
 def parse_arg(arg, max_n):
     if isinstance(arg, float):
-        assert arg > 0.0, "Float arg[%s] must be > 0.0" % arg
+        assert arg >= 0.0, "Float arg[%s] must be > 0.0" % arg
         assert arg <= 1.0, "Float args[%s] must be < 1.0" % arg
         return int(arg * max_n)
     else:
