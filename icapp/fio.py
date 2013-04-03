@@ -91,7 +91,13 @@ def chunk(n, chunksize):
 
 
 class AudioFile(scikits.audiolab.Sndfile):
-    read = scikits.audiolab.Sndfile.read_frames
+    def __init__(self, fn, **kwargs):
+        self._dtype = numpy.dtype(kwargs.pop('dtype', 'f8'))
+        scikits.audiolab.Sndfile.__init__(self, fn, **kwargs)
+
+    def read(self, n):
+        return self.read_frames(n, self._dtype)
+
     write = scikits.audiolab.Sndfile.write_frames
 
     def __len__(self):
@@ -105,10 +111,12 @@ class MultiAudioFile(object):
         self.files = [AudioFile(f, **kwargs) for f in filenames]
         if 'mode' in kwargs and kwargs['mode'] == 'w':
             return
+        self._dtype = self.files[0]._dtype
         self._format = self.files[0].format
         self._samplerate = self.files[0].samplerate
         self._len = len(self.files[0])
         for f in self.files:
+            assert f._dtype == self._dtype
             assert len(f) == self._len
             assert f.format == self._format
             assert f.samplerate == self._samplerate
