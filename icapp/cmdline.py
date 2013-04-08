@@ -140,10 +140,14 @@ def options_to_kwargs(options):
     logging.debug("Setting dtype: %s" % kwargs['dtype'])
 
     for k in ['count', 'clean', 'icafile', 'method', 'ncomponents',
-            'overwrite', 'output', 'plot', 'sargs', 'chunksize',
+            'overwrite', 'output', 'plot', 'chunksize',
             'threshold', 'stdthreshold']:
         kwargs[k] = getattr(options, k)
         logging.debug("Settings %s: %s" % (k, kwargs[k]))
+
+    kwargs['sargs'] = []
+    for sa in options.sargs:
+        kwargs['sargs'].append(eval(sa))
 
     # if cleaning files, make output directory
     if options.clean and (not os.path.exists(options.output)):
