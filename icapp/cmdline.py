@@ -16,6 +16,11 @@ def parse(args):
     parser = optparse.OptionParser( \
             usage='usage: %prog [options] audiofiles...')
     options = [
+            [['-a', '--alphabetic'], {
+                'help': 'Alphabetically sort filenames',
+                'default': False,
+                'action': 'store_true',
+                }],
             [['-c', '--count'], {
                 'help': 'Component is noise if on > count channels',
                 'default': 3,
@@ -105,6 +110,8 @@ def run(args=None):
     if not all([os.path.exists(f) for f in files]):
         raise IOError("One (or more) input files does not exist: %s" % files)
 
+    if options.alphabetic:
+        files.sort()
     clean_files(files, **options_to_kwargs(options))
 
 
