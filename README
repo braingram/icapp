@@ -1,0 +1,21 @@
+ica.p components
+
+mm = mixing matrix
+    mixing matrix (rows = channels, columns = components)
+
+um = unmixing matrix
+    unmixing matrix (rows = components, columns = channels?)
+
+cm = cleaning matrix
+    mix * unmix, shortcut to clean data (cm * data)
+
+t = binary threshold
+    if abs(some mm cell value) > t, the corresponding component (col) is
+    considered 'present' on the corresponding channel (row)
+
+fns = filenames
+    filenames (in the order used) to perform the ica
+
+c = channel count threshold
+    if component is present on > c channels then remove it
+    by zeroing out that column in the mm
