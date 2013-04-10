@@ -44,6 +44,11 @@ def parse_options(args=None):
     """
     parser = optparse.OptionParser( \
             usage="usage: %prog [options] audiofiles...")
+
+    parser.add_option("-a", "--alphabetic",
+            help="sort files alphabetically",
+            default=False, action="store_true")
+
     parser.add_option("-m", "--method", dest="method",
             help="subsample method: simple,",
             default="random", type="string")
@@ -124,6 +129,9 @@ def parse_options(args=None):
         if len(files) < 2:
             raise ValueError("Found less than 2 files")
         args = files
+
+    if options.alphabetic:
+        args.sort()
 
     options.dtype = np.dtype(options.dtype)
 
@@ -376,6 +384,8 @@ def process():
                 f.write('# subsample: %s\n' % str(options.subsample))
                 f.write('# threshold: %s\n' % str(options.threshold))
                 f.write('# count: %i\n' % options.count)
+                for (i, ifn) in enumerate(inFilenames):
+                    f.write('# %i %s\n' % (i, ifn))
     else:
         logging.debug("Loading matrix from file: %s" % options.mixingmatrix)
         MM = pl.matrix(pl.loadtxt(options.mixingmatrix))
